@@ -14,6 +14,8 @@ import { MarkdownHighlight } from './MarkdownExtensions';
 // @ts-expect-error wiki link extension is plain JS with matching runtime shape
 import { WikiLink } from './WikiLinkExtension';
 import { ContextMenu } from './ContextMenu';
+import { OutlinePanel } from './Outline';
+import { parseOutline, type OutlineItem } from './outlineParser';
 
 interface Props {
   value: string;
@@ -31,6 +33,23 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
   const loadingRef = useRef(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const outline = parseOutline(value);
+
+  function jumpToHeading(item: OutlineItem) {
+    if (!editor) return;
+    // Match the Nth heading in document order (same order as the outline parser).
+    let idx = 0;
+    let target = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'heading') {
+        if (idx === item.headingIndex) { target = pos; return false; }
+        idx += 1;
+      }
+      return true;
+    });
+    if (target < 0) return;
+    editor.chain().focus().setTextSelection(target + 1).scrollIntoView().run();
+  }
 
   const editor = useEditor({
     extensions: [
@@ -100,6 +119,7 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
   }, [editor, value]);
 
   return (
+    <div className="wysiwyg-layout">
     <div
       className="wysiwyg-host"
       data-cm-theme={theme}
@@ -117,6 +137,8 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
           onWiki={() => { onInsertWiki(); setMenu(null); }}
         />
       )}
+    </div>
+    <OutlinePanel items={outline} onJump={jumpToHeading} />
     </div>
   );
 }

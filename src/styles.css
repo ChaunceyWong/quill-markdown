@@ -129,7 +129,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .table-grid-cell { width: 15px; height: 15px; border: 1px solid var(--border); border-radius: 2px; }
 .table-grid-cell.on { background: var(--accent); border-color: var(--accent); }
 
+.wysiwyg-layout { display: flex; flex: 1; min-width: 0; height: 100%; }
 .wysiwyg-host { flex: 1; min-width: 0; height: 100%; overflow: auto; background: var(--bg); }
+
+.outline-panel { width: 220px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; }
+.outline-title { padding: 12px; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); }
+.outline-list { padding: 6px 0; }
+.outline-item {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 5px 10px; font-size: 12px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.outline-item:hover { background: var(--hover); color: var(--accent); }
+.outline-item.level-1 { font-weight: 600; }
+.outline-empty { padding: 8px 12px; font-size: 12px; color: var(--muted); }
 .wysiwyg-content { max-width: 760px; margin: 0 auto; padding: 32px 40px 120px; min-height: 100%; outline: none; color: var(--text); font-size: 15px; line-height: 1.75; }
 .wysiwyg-content h1, .wysiwyg-content h2 { border-bottom: 1px solid var(--border); padding-bottom: 6px; }
 .wysiwyg-content h3, .wysiwyg-content h4, .wysiwyg-content h5, .wysiwyg-content h6 { line-height: 1.3; }
