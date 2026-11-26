@@ -2,31 +2,26 @@
 
 English · [简体中文](README.zh-CN.md)
 
-A small, local-first Markdown editor for macOS. Write in source, see the result live — no account, no cloud, no subscriptions.
+A small, local-first Markdown editor for macOS. Write in a clean, rendered page — or switch to source with a live preview. No account, no cloud, no subscriptions.
 
-> **Status: early development (M1).** Core editing works and the macOS app has been built and run, but the feature set is intentionally small. Feedback and contributions are welcome.
+## Why Quill Markdown?
 
-## Why another Markdown editor?
+- **Built for writing.** A single-pane, WYSIWYG view keeps your document in focus. Formatting happens where you write — right-click for bold, italics, highlights, lists, links, tables, and more — while common shortcuts just work.
+- **Your files, your rules.** `.md` files on disk are the single source of truth. No database, no account, no telemetry. Your writing stays plain text that you can take anywhere.
+- **Small and fast.** Built with [Tauri](https://tauri.app/) on the system WebView instead of bundling a browser. The installer is a fraction of the size of an Electron app.
+- **Safe saves.** Every edit is serialized back to Markdown and autosaved with a short debounce via write-to-temporary-then-rename, so a crash cannot leave a truncated file. `Cmd+S` forces an immediate save.
+- **Connected notes.** Link documents with `[[wiki links]]` and discover what references the current page through the backlink panel.
 
-Quill Markdown is built around a few deliberate choices:
+## Features
 
-- **Small footprint.** Built with [Tauri](https://tauri.app/) instead of Electron, it uses the system WebView. The DMG installer is only a few megabytes.
-- **Local-first.** Your `.md` files on disk are the single source of truth. No database, no account, no telemetry. Close the app and your writing is just a pile of plain text files you can take anywhere.
-- **Safe saves.** Edits are autosaved with a short debounce via write-to-temporary-then-rename, so a crash cannot leave a truncated file. `Cmd+S` forces an immediate save.
-- **Simple, not bloated.** It is a source editor with a live preview — not a WYSIWYG clone of Typora. That trade-off keeps the codebase small and the editor predictable.
-
-## Features (M1)
-
-- Open a folder and browse its `.md` files in a collapsible sidebar tree
-- Multiple tabs — one editable buffer per file
-- CodeMirror 6 source editor with GFM syntax highlighting
-- markdown-it live preview with GFM support (tables, task lists, strikethrough, autolinks)
-- Paste an image → it is copied into `_assets/` next to the document and referenced with a relative path
-- Debounced autosave + atomic rename + `Cmd+S` force save, with an unsaved-changes indicator
+- WYSIWYG editing by default, with a switchable source + live-preview mode as a fallback
+- Right-click formatting menu: bold, italic, strikethrough, underline, inline code, highlight, horizontal rule, quotes, lists, and an interactive table-size picker
+- `[[filename]]` wiki links with clickable navigation and a backlink panel in the sidebar
+- Open a folder and browse `.md` files in a collapsible sidebar tree; multiple tabs, one file per tab
+- Paste images → automatically copied into `_assets/` next to the document and referenced with a relative path
+- Recent files on the welcome page, with per-item removal and clear-all
 - Light / dark themes with manual switching and persistence
-- Welcome page with recently opened files
-
-Not included (for now): math rendering, table editing aids, spellcheck, version history, global search, plugins, and single-pane WYSIWYG editing.
+- GFM rendering (tables, task lists, strikethrough, autolinks) in the source preview
 
 ## Getting started
 
@@ -48,7 +43,7 @@ pnpm tauri dev     # development build with hot reload
 pnpm tauri build   # produces the .app and .dmg under src-tauri/target/release/bundle/
 ```
 
-The frontend alone can be built with `pnpm build` (output in `dist/`), which is useful for quick type-checks without the Rust toolchain.
+The frontend alone can be built with `pnpm build` (output in `dist/`), which is useful for a quick type-check without the Rust toolchain.
 
 > **Tip for macOS DMG builds:** if Tauri's DMG bundling fails with an AppleScript / Finder automation permission error, grant your terminal "Control Finder" under *System Settings → Privacy & Security → Automation*, or convert the intermediate image yourself:
 > ```bash
@@ -61,9 +56,12 @@ The frontend alone can be built with `pnpm build` (output in `dist/`), which is 
 ```
 .
 ├── src/                  # React frontend (TypeScript)
-│   ├── App.tsx           # app shell: tabs, sidebar, autosave, theme
+│   ├── App.tsx           # app shell: tabs, sidebar, autosave, theme, backlinks
+│   ├── WysiwygEditor.tsx # single-pane WYSIWYG editor (TipTap)
+│   ├── ContextMenu.tsx   # right-click formatting menu
 │   ├── Editor.tsx        # CodeMirror 6 source editor
 │   ├── Preview.tsx       # live preview panel
+│   ├── wiki.ts           # wiki link parsing / backlink index
 │   └── render.ts         # markdown-it rendering + image resolution
 ├── src-tauri/            # Rust / Tauri backend
 │   └── src/lib.rs        # file I/O, atomic saves, assets, app state
@@ -86,7 +84,7 @@ Issues and pull requests are welcome. Before opening a PR:
 2. Run `pnpm build` and `cargo check` (inside `src-tauri/`) before submitting.
 3. Keep changes focused and explain the reasoning in your pull request.
 
-## Roadmap ideas (not committed)
+## Roadmap
 
 - Export to HTML / PDF
 - Multi-window support
