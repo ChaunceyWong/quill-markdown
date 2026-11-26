@@ -25,11 +25,13 @@ interface Props {
   onWikiClick: (name: string) => void;
   onInsertWiki: () => void;
   theme: 'light' | 'dark';
+  initialPos?: { from: number; to: number; scrollTop: number };
+  onPersistPos?: (pos: { from: number; to: number; scrollTop: number }) => void;
 }
 
-export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, onInsertWiki, theme }: Props) {
-  const cbRef = useRef({ onChange, onSave, onPasteImage, onWikiClick });
-  cbRef.current = { onChange, onSave, onPasteImage, onWikiClick };
+export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, onInsertWiki, theme, initialPos, onPersistPos }: Props) {
+  const cbRef = useRef({ onChange, onSave, onPasteImage, onWikiClick, onPersistPos });
+  cbRef.current = { onChange, onSave, onPasteImage, onWikiClick, onPersistPos };
   const loadingRef = useRef(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -108,6 +110,10 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
       if (loadingRef.current) return;
       cbRef.current.onChange(e.getMarkdown());
     },
+    onSelectionUpdate: ({ editor: e }) => {
+      const { from, to } = e.state.selection;
+      cbRef.current.onPersistPos?.({ from, to, scrollTop: hostRef.current?.scrollTop ?? 0 });
+    },
   });
 
   useEffect(() => {
@@ -117,6 +123,17 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
     editor.commands.setContent(value, { contentType: 'markdown', emitUpdate: false });
     loadingRef.current = false;
   }, [editor, value]);
+
+  // Restore cursor and scroll position when switching back to this document.
+  useEffect(() => {
+    if (!editor || !initialPos) return;
+    const { from, to, scrollTop } = initialPos;
+    const max = editor.state.doc.content.size;
+    if (from <= max) {
+      editor.commands.setTextSelection({ from: Math.max(1, from), to: Math.min(max, Math.max(from, to)) });
+    }
+    if (hostRef.current) hostRef.current.scrollTop = scrollTop;
+  }, [editor]);
 
   return (
     <div className="wysiwyg-layout">

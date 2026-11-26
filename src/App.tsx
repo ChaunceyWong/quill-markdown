@@ -33,6 +33,7 @@ export default function App() {
   const [wysiwyg, setWysiwyg] = useState(true);
   const [fileMenu, setFileMenu] = useState<{ entry: Entry | null; parentDir: string; x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<{ path: string; cut: boolean } | null>(null);
+  const [docPositions, setDocPositions] = useState<Record<string, { from: number; to: number; scrollTop: number }>>({});
   const saveTimer = useRef<Record<string, number>>({});
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -381,6 +382,8 @@ export default function App() {
                   }
                 }}
                 theme={themeDark ? 'dark' : 'light'}
+                initialPos={docPositions[active.path]}
+                onPersistPos={(pos) => setDocPositions((prev) => ({ ...prev, [active.path]: pos }))}
               />
             ) : (
               <div className="split">
