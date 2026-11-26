@@ -16,6 +16,7 @@ import { WikiLink } from './WikiLinkExtension';
 import { ContextMenu } from './ContextMenu';
 import { OutlinePanel } from './Outline';
 import { parseOutline, type OutlineItem } from './outlineParser';
+import { toEditorMarkdown, fromEditorMarkdown } from './imageMd';
 
 interface Props {
   value: string;
@@ -27,9 +28,11 @@ interface Props {
   theme: 'light' | 'dark';
   initialPos?: { from: number; to: number; scrollTop: number };
   onPersistPos?: (pos: { from: number; to: number; scrollTop: number }) => void;
+  docPath: string | null;
 }
 
-export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, onInsertWiki, theme, initialPos, onPersistPos }: Props) {
+export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, onInsertWiki, theme, initialPos, onPersistPos, docPath }: Props) {
+  const reverseImages = useRef<Map<string, string>>(new Map());
   const cbRef = useRef({ onChange, onSave, onPasteImage, onWikiClick, onPersistPos });
   cbRef.current = { onChange, onSave, onPasteImage, onWikiClick, onPersistPos };
   const loadingRef = useRef(false);
@@ -58,7 +61,7 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, underline: false }),
       Underline,
       Link.configure({ openOnClick: false, autolink: true }),
-      Image.configure({ inline: false }),
+      Image.configure({ inline: false, allowBase64: true }),
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,
@@ -108,7 +111,7 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
     },
     onUpdate: ({ editor: e }) => {
       if (loadingRef.current) return;
-      cbRef.current.onChange(e.getMarkdown());
+      cbRef.current.onChange(fromEditorMarkdown(e.getMarkdown(), reverseImages.current));
     },
     onSelectionUpdate: ({ editor: e }) => {
       const { from, to } = e.state.selection;
@@ -118,22 +121,29 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
 
   useEffect(() => {
     if (!editor) return;
-    if (editor.getMarkdown() === value) return;
+    let cancelled = false;
     loadingRef.current = true;
-    editor.commands.setContent(value, { contentType: 'markdown', emitUpdate: false });
-    loadingRef.current = false;
-  }, [editor, value]);
-
-  // Restore cursor and scroll position when switching back to this document.
-  useEffect(() => {
-    if (!editor || !initialPos) return;
-    const { from, to, scrollTop } = initialPos;
-    const max = editor.state.doc.content.size;
-    if (from <= max) {
-      editor.commands.setTextSelection({ from: Math.max(1, from), to: Math.min(max, Math.max(from, to)) });
-    }
-    if (hostRef.current) hostRef.current.scrollTop = scrollTop;
-  }, [editor]);
+    toEditorMarkdown(value, docPath).then(({ markdown, reverse }) => {
+      if (cancelled) return;
+      reverseImages.current = reverse;
+      if (editor.getMarkdown() !== markdown) {
+        editor.commands.setContent(markdown, { contentType: 'markdown', emitUpdate: false });
+      }
+      // Restore cursor/scroll after the content is in place.
+      if (initialPos) {
+        const max = editor.state.doc.content.size;
+        if (initialPos.from <= max) {
+          editor.commands.setTextSelection({
+            from: Math.max(1, initialPos.from),
+            to: Math.min(max, Math.max(initialPos.from, initialPos.to)),
+          });
+        }
+        if (hostRef.current) hostRef.current.scrollTop = initialPos.scrollTop;
+      }
+      loadingRef.current = false;
+    }).catch(() => { loadingRef.current = false; });
+    return () => { cancelled = true; };
+  }, [editor, value, docPath]);
 
   return (
     <div className="wysiwyg-layout">

@@ -384,6 +384,7 @@ export default function App() {
                 theme={themeDark ? 'dark' : 'light'}
                 initialPos={docPositions[active.path]}
                 onPersistPos={(pos) => setDocPositions((prev) => ({ ...prev, [active.path]: pos }))}
+                docPath={active.path}
               />
             ) : (
               <div className="split">
