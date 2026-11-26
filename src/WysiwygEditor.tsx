@@ -29,9 +29,13 @@ interface Props {
   initialPos?: { from: number; to: number; scrollTop: number };
   onPersistPos?: (pos: { from: number; to: number; scrollTop: number }) => void;
   docPath: string | null;
+  pendingInsert?: { id: number; text: string } | null;
+  onInserted?: () => void;
 }
 
-export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, onInsertWiki, theme, initialPos, onPersistPos, docPath }: Props) {
+export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, onInsertWiki, theme, initialPos, onPersistPos, docPath, pendingInsert, onInserted }: Props) {
+  const insertRef = useRef({ pendingInsert, onInserted });
+  insertRef.current = { pendingInsert, onInserted };
   const reverseImages = useRef<Map<string, string>>(new Map());
   const cbRef = useRef({ onChange, onSave, onPasteImage, onWikiClick, onPersistPos });
   cbRef.current = { onChange, onSave, onPasteImage, onWikiClick, onPersistPos };
@@ -144,6 +148,18 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
     }).catch(() => { loadingRef.current = false; });
     return () => { cancelled = true; };
   }, [editor, value, docPath]);
+
+  // Insert externally requested Markdown (pasted image / wiki link) at the
+  // current cursor, avoiding a full setContent that would reset the cursor.
+  useEffect(() => {
+    if (!editor || !insertRef.current.pendingInsert) return;
+    const md = insertRef.current.pendingInsert.text;
+    insertRef.current.pendingInsert = null;
+    loadingRef.current = true;
+    editor.chain().focus().insertContent(md).run();
+    loadingRef.current = false;
+    insertRef.current.onInserted?.();
+  }, [editor, pendingInsert]);
 
   return (
     <div className="wysiwyg-layout">

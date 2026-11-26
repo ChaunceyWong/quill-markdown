@@ -13,6 +13,11 @@ export interface Buffer {
   kind?: 'markdown' | 'image';
 }
 
+export interface PendingInsert {
+  id: number;
+  text: string;
+}
+
 export interface AppState {
   recent: string[];
   theme: 'light' | 'dark';

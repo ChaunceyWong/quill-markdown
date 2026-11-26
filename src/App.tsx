@@ -34,6 +34,11 @@ export default function App() {
   const [fileMenu, setFileMenu] = useState<{ entry: Entry | null; parentDir: string; x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<{ path: string; cut: boolean } | null>(null);
   const [docPositions, setDocPositions] = useState<Record<string, { from: number; to: number; scrollTop: number }>>({});
+  const [pendingInsert, setPendingInsert] = useState<{ id: number; text: string } | null>(null);
+  const insertIdRef = useRef(0);
+  const queueInsert = useCallback((text: string) => {
+    setPendingInsert({ id: ++insertIdRef.current, text });
+  }, []);
   const saveTimer = useRef<Record<string, number>>({});
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -212,8 +217,11 @@ export default function App() {
     if (!activePath) { setStatus('请先打开一个文档'); return; }
     try {
       const rel = await api.saveImage(entry.path, activePath);
-      const tab = tabsRef.current.find((t) => t.path === activePath);
-      if (tab) changeContent(tab.content + `\n![](${rel})\n`);
+      if (wysiwyg) queueInsert(`\n![](${rel})\n`);
+      else {
+        const tab = tabsRef.current.find((t) => t.path === activePath);
+        if (tab) changeContent(tab.content + `\n![](${rel})\n`);
+      }
       setStatus('已插入图片引用');
     } catch (e) { setStatus(`插入失败: ${String(e)}`); }
   }
@@ -234,9 +242,14 @@ export default function App() {
   async function handlePasteImage(tempPath: string) {
     if (!activePath) return;
     const rel = await api.saveImage(tempPath, activePath);
-    const imageMd = `![](${rel})`;
-    const tab = tabsRef.current.find((t) => t.path === activePath);
-    if (tab) changeContent(tab.content + '\n' + imageMd + '\n');
+    if (wysiwyg) {
+      // Insert at the cursor through the editor instead of rewriting the whole
+      // document (which would reset the cursor to the start).
+      queueInsert(`\n![](${rel})\n`);
+    } else {
+      const tab = tabsRef.current.find((t) => t.path === activePath);
+      if (tab) changeContent(tab.content + '\n![](' + rel + ')\n');
+    }
   }
 
   async function handleWikiClick(href: string) {
@@ -376,15 +389,14 @@ export default function App() {
                 onWikiClick={(name) => handleWikiClick(`wiki://${encodeURIComponent(name)}`)}
                 onInsertWiki={() => {
                   const name = window.prompt('要链接的文档名（不含 .md）');
-                  if (name && activePath) {
-                    const tab = tabsRef.current.find((t) => t.path === activePath);
-                    if (tab) changeContent(tab.content + `\n[[${name}]]\n`);
-                  }
+                  if (name) queueInsert(`[[${name}]]`);
                 }}
                 theme={themeDark ? 'dark' : 'light'}
                 initialPos={docPositions[active.path]}
                 onPersistPos={(pos) => setDocPositions((prev) => ({ ...prev, [active.path]: pos }))}
                 docPath={active.path}
+                pendingInsert={pendingInsert}
+                onInserted={() => setPendingInsert(null)}
               />
             ) : (
               <div className="split">

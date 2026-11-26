@@ -21,7 +21,7 @@ fn list_entries(dir: &Path) -> std::io::Result<Vec<Entry>> {
     });
     for e in items {
         let name = e.file_name().to_string_lossy().into_owned();
-        if name.starts_with('.') || name == "_assets" {
+        if name.starts_with('.') {
             continue;
         }
         let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
