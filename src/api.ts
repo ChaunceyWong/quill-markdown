@@ -15,6 +15,10 @@ export function readFile(path: string): Promise<string> {
   return invoke<string>('read_file', { path });
 }
 
+export function listMarkdownFiles(root: string): Promise<string[]> {
+  return invoke<string[]>('list_markdown_files', { root });
+}
+
 export function writeFile(path: string, content: string): Promise<void> {
   return invoke('write_file', { path, content });
 }

@@ -58,6 +58,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tree-item.active { background: var(--accent); color: #fff; }
 .tree-icon { display: inline-block; width: 16px; }
 
+.backlinks { border-top: 1px solid var(--border); margin-top: 8px; }
+.backlinks-toggle {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 8px 12px; font-size: 12px; color: var(--muted);
+}
+.backlinks-toggle:hover { background: var(--hover); }
+.backlinks-list { padding: 0 0 8px; }
+.backlink-item {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 5px 12px 5px 24px; font-size: 12px; color: var(--accent);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.backlink-item:hover { background: var(--hover); }
+.backlinks-empty { padding: 4px 24px; font-size: 12px; color: var(--muted); }
+
+.preview-click-host { flex: 1; min-width: 0; display: flex; }
+.preview-click-host .preview-host { flex: 1; }
+
 .workspace { flex: 1; min-width: 0; display: flex; }
 .split { display: flex; flex: 1; min-width: 0; }
 .editor-host, .preview-host { flex: 1; min-width: 0; height: 100%; overflow: auto; }
@@ -79,10 +97,35 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .primary { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; }
 .primary:hover { filter: brightness(1.08); }
 .welcome h2 { font-size: 14px; color: var(--muted); margin-top: 36px; }
+.recent-header { display: flex; align-items: center; justify-content: space-between; margin-top: 36px; }
+.recent-header h2 { margin: 0; }
+.recent-clear { background: none; border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; font-size: 11px; color: var(--muted); }
+.recent-clear:hover { background: var(--hover); }
 .recent { list-style: none; padding: 0; text-align: left; }
-.recent li { display: flex; flex-direction: column; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.recent li { position: relative; display: flex; flex-direction: column; padding: 8px 32px 8px 12px; border-bottom: 1px solid var(--border); }
 .recent button { background: none; border: none; text-align: left; padding: 0; color: var(--accent); }
+.recent-remove { position: absolute; right: 8px; top: 8px; font-size: 16px !important; color: var(--muted) !important; line-height: 1; }
+.recent-remove:hover { color: var(--text) !important; }
 .recent span { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.mode-btn { font-size: 12px; border: 1px solid var(--border); border-radius: 5px; padding: 3px 9px; }
+
+.wysiwyg-host { flex: 1; min-width: 0; height: 100%; overflow: auto; background: var(--bg); }
+.wysiwyg-content { max-width: 760px; margin: 0 auto; padding: 32px 40px 120px; min-height: 100%; outline: none; color: var(--text); font-size: 15px; line-height: 1.75; }
+.wysiwyg-content h1, .wysiwyg-content h2 { border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.wysiwyg-content h3, .wysiwyg-content h4, .wysiwyg-content h5, .wysiwyg-content h6 { line-height: 1.3; }
+.wysiwyg-content pre { background: var(--panel); padding: 14px; border-radius: 6px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.wysiwyg-content code { background: var(--panel); padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
+.wysiwyg-content pre code { background: none; padding: 0; }
+.wysiwyg-content blockquote { border-left: 4px solid var(--border); margin: 0; padding-left: 16px; color: var(--muted); }
+.wysiwyg-content img { max-width: 100%; border-radius: 4px; }
+.wysiwyg-content a { color: var(--accent); }
+.wysiwyg-content ul, .wysiwyg-content ol { padding-left: 24px; }
+.wysiwyg-content hr { border: none; border-top: 1px solid var(--border); }
+.wysiwyg-content table { border-collapse: collapse; }
+.wysiwyg-content th, .wysiwyg-content td { border: 1px solid var(--border); padding: 6px 12px; }
+.wiki-link { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 4px; padding: 1px 4px; cursor: pointer; }
+.ProseMirror-selectednode.wiki-link { outline: 2px solid var(--accent); }
 
 .statusbar {
   position: fixed; bottom: 12px; right: 12px; background: var(--panel); border: 1px solid var(--border);

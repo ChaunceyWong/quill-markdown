@@ -54,6 +54,30 @@ fn read_file(path: &str) -> Result<String, String> {
     fs::read_to_string(path).map_err(|e| e.to_string())
 }
 
+/// Recursively collect all .md files under a directory (skipping hidden dirs
+/// and `_assets`). Used by the backlink index.
+#[tauri::command]
+fn list_markdown_files(root: &str) -> Result<Vec<String>, String> {
+    fn walk(dir: &Path, out: &mut Vec<String>) -> std::io::Result<()> {
+        for e in fs::read_dir(dir)?.filter_map(|e| e.ok()) {
+            let name = e.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') || name == "_assets" {
+                continue;
+            }
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, out)?;
+            } else if p.extension().and_then(|s| s.to_str()) == Some("md") {
+                out.push(p.to_string_lossy().into_owned());
+            }
+        }
+        Ok(())
+    }
+    let mut out = Vec::new();
+    walk(Path::new(root), &mut out).map_err(|e| e.to_string())?;
+    Ok(out)
+}
+
 /// Read an image asset and return it as a data URL for the preview.
 /// Using data URLs avoids depending on Tauri's `asset://` protocol scope
 /// and works identically in the Tauri webview and a plain browser.
@@ -178,6 +202,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_folder,
             read_file,
+            list_markdown_files,
             read_asset,
             write_file,
             write_temp_image,

@@ -12,9 +12,15 @@ export const md: MarkdownIt = new MarkdownIt({
  * Render Markdown to HTML. Relative images inside `_assets/` are resolved
  * to data URLs via the Rust backend, so preview works without depending on
  * Tauri's asset protocol. Absolute http(s)/data URLs are left untouched.
+ * [[wiki links]] become clickable anchors handled by the app shell.
  */
 export async function render(source: string, docPath: string | null): Promise<string> {
-  const tokens = md.parse(source, {});
+  const wikiExpanded = source.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_m, name: string, label?: string) => {
+    const target = name.trim();
+    const text = (label ?? name).trim();
+    return `[${text}](wiki://${encodeURIComponent(target)})`;
+  });
+  const tokens = md.parse(wikiExpanded, {});
   let html = md.renderer.render(tokens, md.options, {});
   if (!docPath) return html;
 
