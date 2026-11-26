@@ -1,5 +1,7 @@
 # Quill Markdown
 
+English · [简体中文](README.zh-CN.md)
+
 A small, local-first Markdown editor for macOS. Write in source, see the result live — no account, no cloud, no subscriptions.
 
 > **Status: early development (M1).** Core editing works and the macOS app has been built and run, but the feature set is intentionally small. Feedback and contributions are welcome.
