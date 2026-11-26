@@ -46,3 +46,27 @@ export function saveState(state: AppState): Promise<void> {
 export function setWindowTheme(dark: boolean): Promise<void> {
   return invoke('set_window_theme', { dark });
 }
+
+export function createEntry(path: string, isDir: boolean): Promise<void> {
+  return invoke('create_entry', { path, isDir });
+}
+
+export function renameEntry(from: string, to: string): Promise<void> {
+  return invoke('rename_entry', { from, to });
+}
+
+export function copyEntry(from: string, to: string, cut: boolean): Promise<void> {
+  return invoke('copy_entry', { from, to, cut });
+}
+
+export function trashEntry(path: string): Promise<void> {
+  return invoke('trash_entry', { path });
+}
+
+export function revealInFinder(path: string): Promise<void> {
+  return invoke('reveal_in_finder', { path });
+}
+
+export function openWithDefaultApp(path: string): Promise<void> {
+  return invoke('open_with_default_app', { path });
+}

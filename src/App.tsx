@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Editor } from './Editor';
 import { Preview } from './Preview';
 import { WysiwygEditor } from './WysiwygEditor';
+import { ImageViewer } from './ImageViewer';
+import { FileTreeContextMenu } from './FileTreeContextMenu';
 import * as api from './api';
 import type { AppState, Buffer, Entry } from './types';
 import { buildWikiIndex, findBacklinks, resolveWikiLink } from './wiki';
@@ -29,6 +31,8 @@ export default function App() {
   const [backlinks, setBacklinks] = useState<string[]>([]);
   const [backlinksOpen, setBacklinksOpen] = useState(false);
   const [wysiwyg, setWysiwyg] = useState(true);
+  const [fileMenu, setFileMenu] = useState<{ entry: Entry | null; parentDir: string; x: number; y: number } | null>(null);
+  const [clipboard, setClipboard] = useState<{ path: string; cut: boolean } | null>(null);
   const saveTimer = useRef<Record<string, number>>({});
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -124,23 +128,93 @@ export default function App() {
     setState((s) => ({ ...s, folder }));
   }
 
+  function refreshFolder() {
+    if (state.folder) api.readFolder(state.folder).then(setEntries).catch(() => {});
+  }
+
   async function openFile(path: string) {
     const existing = tabsRef.current.find((t) => t.path === path);
     if (existing) {
       setActivePath(path);
       return;
     }
+    const name = path.split('/').pop() ?? path;
+    // Image files open in the image viewer tab.
+    if (/\.(png|jpe?g|gif|webp|svg)$/i.test(name)) {
+      setTabs((prev) => [...prev, { path, name, content: '', savedContent: '', kind: 'image' }]);
+      setActivePath(path);
+      setState((s) => ({ ...s, recent: [path, ...s.recent.filter((p) => p !== path)].slice(0, 10) }));
+      return;
+    }
+    // Non-markdown, non-image files use the system default app.
+    if (!/\.md$/i.test(name)) {
+      api.openWithDefaultApp(path).catch((e) => setStatus(`打开失败: ${String(e)}`));
+      return;
+    }
     try {
       const content = await api.readFile(path);
-      setTabs((prev) => [...prev, { path, name: path.split('/').pop() ?? path, content, savedContent: content }]);
+      setTabs((prev) => [...prev, { path, name, content, savedContent: content, kind: 'markdown' }]);
       setActivePath(path);
-      setState((s) => {
-        const recent = [path, ...s.recent.filter((p) => p !== path)].slice(0, 10);
-        return { ...s, recent };
-      });
+      setState((s) => ({ ...s, recent: [path, ...s.recent.filter((p) => p !== path)].slice(0, 10) }));
     } catch (e) {
       setStatus(`打开失败: ${String(e)}`);
     }
+  }
+
+  // ---- File management --------------------------------------------------
+  async function handleCreate(parentDir: string, isDir: boolean, name: string) {
+    try {
+      await api.createEntry(`${parentDir}/${name}`, isDir);
+      refreshFolder();
+    } catch (e) { setStatus(`创建失败: ${String(e)}`); }
+  }
+
+  async function handleRename(entry: Entry, name: string) {
+    const parent = entry.path.replace(/\/[^/]+$/, '');
+    const target = `${parent}/${name}`;
+    try {
+      await api.renameEntry(entry.path, target);
+      setTabs((prev) => prev.map((t) => t.path === entry.path ? { ...t, path: target, name } : t));
+      if (activePath === entry.path) setActivePath(target);
+      setState((s) => ({ ...s, recent: s.recent.map((p) => p === entry.path ? target : p) }));
+      refreshFolder();
+    } catch (e) { setStatus(`重命名失败: ${String(e)}`); }
+  }
+
+  function handleCopy(entry: Entry, cut: boolean) {
+    setClipboard({ path: entry.path, cut });
+    setStatus(cut ? '已剪切' : '已复制');
+  }
+
+  async function handlePaste(targetDir: string) {
+    if (!clipboard) return;
+    const name = clipboard.path.split('/').pop()!;
+    try {
+      await api.copyEntry(clipboard.path, `${targetDir}/${name}`, clipboard.cut);
+      if (clipboard.cut) setClipboard(null);
+      refreshFolder();
+    } catch (e) { setStatus(`粘贴失败: ${String(e)}`); }
+  }
+
+  async function handleTrash(entry: Entry) {
+    if (!window.confirm(`将「${entry.name}」移到废纸篓？`)) return;
+    try {
+      await api.trashEntry(entry.path);
+      setTabs((prev) => prev.filter((t) => t.path !== entry.path));
+      if (activePath === entry.path) setActivePath(null);
+      setState((s) => ({ ...s, recent: s.recent.filter((p) => p !== entry.path) }));
+      refreshFolder();
+    } catch (e) { setStatus(`删除失败: ${String(e)}`); }
+  }
+
+  async function handleCopyToAssets(entry: Entry) {
+    if (!activePath) { setStatus('请先打开一个文档'); return; }
+    try {
+      const rel = await api.saveImage(entry.path, activePath);
+      const tab = tabsRef.current.find((t) => t.path === activePath);
+      if (tab) changeContent(tab.content + `\n![](${rel})\n`);
+      setStatus('已插入图片引用');
+    } catch (e) { setStatus(`插入失败: ${String(e)}`); }
   }
 
   function closeTab(path: string) {
@@ -211,8 +285,13 @@ export default function App() {
               }
             }}
             title={e.path}
+            onContextMenu={(ev) => {
+              ev.preventDefault();
+              const parentDir = e.path.replace(/\/[^/]+$/, '');
+              setFileMenu({ entry: e, parentDir, x: ev.clientX, y: ev.clientY });
+            }}
           >
-            <span className="tree-icon">{e.isDir ? (collapsed ? '▸' : '▾') : '·'}</span>
+            <span className="tree-icon">{e.isDir ? (collapsed ? '▸' : '▾') : /\.(png|jpe?g|gif|webp|svg)$/i.test(e.name) ? '🖼' : '·'}</span>
             {e.name}
           </button>
           {e.isDir && !collapsed && e.children && renderTree(e.children, depth + 1)}
@@ -256,7 +335,11 @@ export default function App() {
 
       <div className="body">
         {state.folder && (
-          <aside className="sidebar">
+          <aside className="sidebar" onContextMenu={(ev) => {
+            if ((ev.target as HTMLElement).closest('.tree-item')) return;
+            ev.preventDefault();
+            setFileMenu({ entry: null, parentDir: state.folder!, x: ev.clientX, y: ev.clientY });
+          }}>
             <div className="sidebar-title">{state.folder.split('/').pop()}</div>
             <div className="tree">{renderTree(entries)}</div>
             <div className="backlinks">
@@ -280,7 +363,9 @@ export default function App() {
 
         <main className="workspace">
           {active ? (
-            wysiwyg ? (
+            active.kind === 'image' ? (
+              <ImageViewer path={active.path} />
+            ) : wysiwyg ? (
               <WysiwygEditor
                 key={active.path}
                 value={active.content}
@@ -344,6 +429,26 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {fileMenu && (
+        <FileTreeContextMenu
+          key={`${fileMenu.x}-${fileMenu.y}-${fileMenu.entry?.path ?? 'root'}`}
+          entry={fileMenu.entry}
+          parentDir={fileMenu.parentDir}
+          x={fileMenu.x}
+          y={fileMenu.y}
+          clipboard={clipboard}
+          onClose={() => setFileMenu(null)}
+          onCreate={handleCreate}
+          onRename={handleRename}
+          onCopy={handleCopy}
+          onPaste={handlePaste}
+          onTrash={handleTrash}
+          onReveal={(e) => api.revealInFinder(e.path).catch(() => {})}
+          onOpenWithDefault={(e) => api.openWithDefaultApp(e.path).catch(() => {})}
+          onCopyToAssets={handleCopyToAssets}
+        />
+      )}
 
       {status && <div className="statusbar" onAnimationEnd={() => setStatus('')}>{status}</div>}
     </div>

@@ -10,6 +10,7 @@ export interface Buffer {
   name: string;
   content: string;
   savedContent: string;
+  kind?: 'markdown' | 'image';
 }
 
 export interface AppState {

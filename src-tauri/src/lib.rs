@@ -27,15 +27,12 @@ fn list_entries(dir: &Path) -> std::io::Result<Vec<Entry>> {
         let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
         let path = e.path();
         let children = if is_dir { Some(list_entries(&path)?) } else { None };
-        let is_md = path.extension().and_then(|s| s.to_str()) == Some("md");
-        if is_dir || is_md {
-            entries.push(Entry {
-                path: path.to_string_lossy().into_owned(),
-                name,
-                is_dir,
-                children,
-            });
-        }
+        entries.push(Entry {
+            path: path.to_string_lossy().into_owned(),
+            name,
+            is_dir,
+            children,
+        });
     }
     Ok(entries)
 }
@@ -181,6 +178,75 @@ fn load_state(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
 
 /// Set the native window appearance so macOS overlay scrollbars and other
 /// native controls follow the chosen theme (CSS alone cannot recolor them).
+// ---- File management ----------------------------------------------------
+
+#[tauri::command]
+fn create_entry(path: &str, is_dir: bool) -> Result<(), String> {
+    let p = Path::new(path);
+    if p.exists() { return Err("Already exists".into()); }
+    if is_dir { fs::create_dir_all(p) } else { fs::write(p, "") }
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn rename_entry(from: &str, to: &str) -> Result<(), String> {
+    let src = Path::new(from);
+    let dst = Path::new(to);
+    if !src.exists() { return Err("Source not found".into()); }
+    if dst.exists() { return Err("Target already exists".into()); }
+    fs::rename(src, dst).map_err(|e| e.to_string())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for e in fs::read_dir(src)? {
+        let e = e?;
+        let name = e.file_name();
+        let target = dst.join(&name);
+        if e.file_type()?.is_dir() {
+            copy_dir_recursive(&e.path(), &target)?;
+        } else {
+            fs::copy(e.path(), target)?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn copy_entry(from: &str, to: &str, cut: bool) -> Result<(), String> {
+    let src = Path::new(from);
+    let dst = Path::new(to);
+    if !src.exists() { return Err("Source not found".into()); }
+    if dst.exists() { return Err("Target already exists".into()); }
+    let result = if cut {
+        fs::rename(src, dst)
+    } else if src.is_dir() {
+        copy_dir_recursive(src, dst)
+    } else {
+        fs::copy(src, dst).map(|_| ())
+    };
+    result.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn trash_entry(path: &str) -> Result<(), String> {
+    trash::delete(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn reveal_in_finder(path: &str) -> Result<(), String> {
+    std::process::Command::new("open")
+        .arg("-R").arg(path)
+        .spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_with_default_app(path: &str) -> Result<(), String> {
+    std::process::Command::new("open")
+        .arg(path)
+        .spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn set_window_theme(window: tauri::WebviewWindow, dark: bool) -> Result<(), String> {
     use tauri::Theme;
@@ -209,6 +275,12 @@ pub fn run() {
             save_image,
             load_state,
             save_state,
+            create_entry,
+            rename_entry,
+            copy_entry,
+            trash_entry,
+            reveal_in_finder,
+            open_with_default_app,
             set_window_theme
         ])
         .run(tauri::generate_context!())

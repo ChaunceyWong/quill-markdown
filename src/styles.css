@@ -132,6 +132,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .wysiwyg-layout { display: flex; flex: 1; min-width: 0; height: 100%; }
 .wysiwyg-host { flex: 1; min-width: 0; height: 100%; overflow: auto; background: var(--bg); }
 
+.inline-input-menu { display: flex; gap: 5px; align-items: center; padding: 6px; }
+.inline-input-menu input { flex: 1; min-width: 120px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-size: 12px; }
+.inline-input-menu button { width: auto !important; flex-shrink: 0; background: var(--accent) !important; color: #fff !important; justify-content: center !important; padding: 4px 8px !important; }
+
+.image-viewer { display: flex; flex-direction: column; flex: 1; min-width: 0; height: 100%; }
+.image-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); font-size: 12px; }
+.image-toolbar span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.image-toolbar button { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 9px; font-size: 12px; }
+.image-canvas { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
+.image-canvas img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform .15s; }
+.image-loading { color: var(--muted); font-size: 13px; }
+
 .outline-panel { width: 220px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; }
 .outline-title { padding: 12px; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); }
 .outline-list { padding: 6px 0; }
