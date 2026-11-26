@@ -1,11 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Markdown } from '@tiptap/markdown';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { Underline } from '@tiptap/extension-underline';
+// @ts-expect-error plain JS module without declarations
+import { MarkdownColor, MarkdownHighlight } from './MarkdownExtensions';
 // @ts-expect-error wiki link extension is plain JS with matching runtime shape
 import { WikiLink } from './WikiLinkExtension';
+import { ContextMenu } from './ContextMenu';
 
 interface Props {
   value: string;
@@ -13,19 +21,29 @@ interface Props {
   onSave: () => void;
   onPasteImage: (path: string) => void;
   onWikiClick: (name: string) => void;
+  onInsertWiki: () => void;
   theme: 'light' | 'dark';
 }
 
-export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, theme }: Props) {
+export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiClick, onInsertWiki, theme }: Props) {
   const cbRef = useRef({ onChange, onSave, onPasteImage, onWikiClick });
   cbRef.current = { onChange, onSave, onPasteImage, onWikiClick };
   const loadingRef = useRef(false);
+  const [menu, setMenu] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, underline: false }),
+      Underline,
       Link.configure({ openOnClick: false, autolink: true }),
       Image.configure({ inline: false }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      MarkdownColor,
+      MarkdownHighlight,
       WikiLink,
       Markdown.configure({}),
     ],
@@ -74,7 +92,6 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
     },
   });
 
-  // Switching documents: replace content without firing onUpdate.
   useEffect(() => {
     if (!editor) return;
     if (editor.getMarkdown() === value) return;
@@ -84,8 +101,20 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
   }, [editor, value]);
 
   return (
-    <div className="wysiwyg-host" data-cm-theme={theme}>
+    <div
+      className="wysiwyg-host"
+      data-cm-theme={theme}
+      ref={hostRef}
+      onContextMenu={(e) => { e.preventDefault(); setMenu(true); }}
+    >
       <EditorContent editor={editor} />
+      {menu && (
+        <ContextMenu
+          editor={editor}
+          onClose={() => setMenu(false)}
+          onWiki={() => { onInsertWiki(); setMenu(false); }}
+        />
+      )}
     </div>
   );
 }

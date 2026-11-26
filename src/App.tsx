@@ -288,6 +288,13 @@ export default function App() {
                 onSave={forceSave}
                 onPasteImage={handlePasteImage}
                 onWikiClick={(name) => handleWikiClick(`wiki://${encodeURIComponent(name)}`)}
+                onInsertWiki={() => {
+                  const name = window.prompt('要链接的文档名（不含 .md）');
+                  if (name && activePath) {
+                    const tab = tabsRef.current.find((t) => t.path === activePath);
+                    if (tab) changeContent(tab.content + `\n[[${name}]]\n`);
+                  }
+                }}
                 theme={themeDark ? 'dark' : 'light'}
               />
             ) : (

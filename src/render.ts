@@ -2,7 +2,9 @@ import MarkdownIt from 'markdown-it';
 import { resolveAsset } from './api';
 
 export const md: MarkdownIt = new MarkdownIt({
-  html: false,
+  // Needed for <span style="color:..."> emitted by the WYSIWYG color/highlight
+  // marks. Content is strictly local user-authored files.
+  html: true,
   linkify: true,
   typographer: false,
   breaks: false,
