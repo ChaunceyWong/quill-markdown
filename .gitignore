@@ -1,0 +1,9 @@
+node_modules/
+.pnpm-store/
+dist/
+tsconfig.tsbuildinfo
+src-tauri/target/
+.toolchain/
+src-tauri/icons/icon.iconset/
+.test-fixture/
+.DS_Store
