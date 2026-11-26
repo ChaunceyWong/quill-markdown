@@ -65,20 +65,10 @@ The frontend alone can be built with `pnpm build` (output in `dist/`), which is 
 │   └── render.ts         # markdown-it rendering + image resolution
 ├── src-tauri/            # Rust / Tauri backend
 │   └── src/lib.rs        # file I/O, atomic saves, assets, app state
-├── docs/adr/             # architecture decision records
-├── GLOSSARY.md           # domain vocabulary
 ├── scripts/
 │   └── generate_icons.py # regenerates the app icons (needs Pillow)
 └── LICENSE               # Apache-2.0
 ```
-
-## Design and documentation
-
-- [`GLOSSARY.md`](GLOSSARY.md) defines the project's domain language (File, Buffer, Entry, RenderedHTML, Asset, …).
-- [`docs/adr/`](docs/adr/) records the architectural decisions and their trade-offs:
-  - [0001 — Source editor with a live preview, not WYSIWYG](docs/adr/0001-source-editor-with-live-preview.md)
-  - [0002 — Tauri v2 for a small installer](docs/adr/0002-tauri-v2-for-a-small-installer.md)
-  - [0003 — Local files with atomic autosave](docs/adr/0003-local-files-with-atomic-autosave.md)
 
 ## Data and privacy
 
@@ -92,7 +82,7 @@ Issues and pull requests are welcome. Before opening a PR:
 
 1. Keep the scope small — this project's main value is staying minimal.
 2. Run `pnpm build` and `cargo check` (inside `src-tauri/`) before submitting.
-3. If you change a domain concept, update `GLOSSARY.md`; if you change an architectural decision, add an ADR.
+3. Keep changes focused and explain the reasoning in your pull request.
 
 ## Roadmap ideas (not committed)
 

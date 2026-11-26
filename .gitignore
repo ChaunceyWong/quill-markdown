@@ -1,9 +1,24 @@
+# 依赖与包管理器缓存
 node_modules/
 .pnpm-store/
+
+# 构建产物
 dist/
-tsconfig.tsbuildinfo
 src-tauri/target/
+src-tauri/gen/
+tsconfig.tsbuildinfo
+
+# 本地 Rust 工具链（DSH 环境安装）
 .toolchain/
+
+# 图标生成中间产物
 src-tauri/icons/icon.iconset/
+
+# 测试 fixture
 .test-fixture/
+
+# 开发文档（不随开源仓库发布）
+docs/
+GLOSSARY.md
+
 .DS_Store
