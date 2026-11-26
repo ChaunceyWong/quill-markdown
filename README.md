@@ -86,8 +86,9 @@ Issues and pull requests are welcome. Before opening a PR:
 2. Run `pnpm build` and `cargo check` (inside `src-tauri/`) before submitting.
 3. Keep changes focused and explain the reasoning in your pull request.
 
-## Roadmap ideas (not committed)
+## Roadmap — M2 (planned, not implemented yet)
 
+- Welcome page: delete individual recent-file entries and clear the whole list
 - Export to HTML / PDF
 - Multi-window support
 - Global search across the open folder

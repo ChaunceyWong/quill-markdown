@@ -86,8 +86,9 @@ pnpm tauri build   # 在 src-tauri/target/release/bundle/ 下生成 .app 和 .dm
 2. 提交前运行 `pnpm build` 和 `cargo check`（在 `src-tauri/` 目录下）。
 3. 让改动聚焦，并在 PR 中说明你的理由。
 
-## 路线图想法（尚未承诺）
+## 路线图 —— M2（规划中，尚未实现）
 
+- 欢迎页：支持删除单条访问记录，以及清空全部访问记录
 - 导出为 HTML / PDF
 - 多窗口支持
 - 在打开的文件夹中全局搜索
