@@ -1,34 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Editor } from '@tiptap/core';
 
 interface Props {
   editor: Editor | null;
+  x: number;
+  y: number;
   onClose: () => void;
   onWiki: () => void;
 }
 
 interface TableGrid { rows: number; cols: number }
 
-export function ContextMenu({ editor, onClose, onWiki }: Props) {
+export function ContextMenu({ editor, x, y, onClose, onWiki }: Props) {
+  // Keep the menu inside the viewport.
+  const left = Math.min(x, window.innerWidth - 240);
+  const top = Math.min(y, window.innerHeight - 400);
+  // Local grid state lives in the parent via key reset on open; using a
+  // module-level weakmap-free approach: state is kept in this component and
+  // reset because the menu is remounted on every right-click.
   const [grid, setGrid] = useState<TableGrid | null>(null);
-  const [x, setX] = useState(0);
-  const [y, setY] = useState(0);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      setX(Math.min(e.clientX, window.innerWidth - 240));
-      setY(Math.min(e.clientY, window.innerHeight - 360));
-    };
-    window.addEventListener('contextmenu', handler, { capture: true });
-    return () => window.removeEventListener('contextmenu', handler, { capture: true });
-  }, []);
 
   if (!editor) return null;
   const run = (fn: () => void) => { fn(); onClose(); };
   const hasSelection = !editor.state.selection.empty;
 
   return (
-    <div className="context-menu" style={{ left: x, top: y }} onMouseLeave={onClose}>
+    <div className="context-menu" style={{ left, top }} onMouseLeave={onClose}>
       <button onClick={() => run(() => editor.chain().focus().toggleBold().run())}>
         <b>加粗</b> <kbd>⌘B</kbd>
       </button>
@@ -44,25 +41,6 @@ export function ContextMenu({ editor, onClose, onWiki }: Props) {
       <button onClick={() => run(() => editor.chain().focus().toggleCode().run())}>
         行内代码 <kbd>⌘E</kbd>
       </button>
-
-      <div className="context-sep" />
-
-      <div className="context-colors">
-        <span>文字颜色</span>
-        {['#e53e3e', '#dd6b20', '#38a169', '#3182ce', '#805ad5', 'var(--text)'].map((c) => (
-          <button
-            key={c}
-            className="color-swatch"
-            style={{ background: c }}
-            title={c}
-            onClick={() => run(() => {
-              const chain = editor.chain().focus() as any;
-              if (c === 'var(--text)') chain.unsetColor().run();
-              else chain.setColor(c).run();
-            })}
-          />
-        ))}
-      </div>
 
       <div className="context-sep" />
 

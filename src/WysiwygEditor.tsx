@@ -10,7 +10,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { Underline } from '@tiptap/extension-underline';
 // @ts-expect-error plain JS module without declarations
-import { MarkdownColor, MarkdownHighlight } from './MarkdownExtensions';
+import { MarkdownHighlight } from './MarkdownExtensions';
 // @ts-expect-error wiki link extension is plain JS with matching runtime shape
 import { WikiLink } from './WikiLinkExtension';
 import { ContextMenu } from './ContextMenu';
@@ -29,7 +29,7 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
   const cbRef = useRef({ onChange, onSave, onPasteImage, onWikiClick });
   cbRef.current = { onChange, onSave, onPasteImage, onWikiClick };
   const loadingRef = useRef(false);
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -42,7 +42,6 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
       TableRow,
       TableCell,
       TableHeader,
-      MarkdownColor,
       MarkdownHighlight,
       WikiLink,
       Markdown.configure({}),
@@ -105,14 +104,17 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
       className="wysiwyg-host"
       data-cm-theme={theme}
       ref={hostRef}
-      onContextMenu={(e) => { e.preventDefault(); setMenu(true); }}
+      onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}
     >
       <EditorContent editor={editor} />
       {menu && (
         <ContextMenu
+          key={`${menu.x}-${menu.y}`}
           editor={editor}
-          onClose={() => setMenu(false)}
-          onWiki={() => { onInsertWiki(); setMenu(false); }}
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          onWiki={() => { onInsertWiki(); setMenu(null); }}
         />
       )}
     </div>
