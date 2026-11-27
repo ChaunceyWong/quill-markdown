@@ -80,6 +80,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .split { display: flex; flex: 1; min-width: 0; }
 .editor-host, .preview-host { flex: 1; min-width: 0; height: 100%; overflow: auto; }
 .editor-host { border-right: 1px solid var(--border); background: var(--bg); }
+/* A source editor shown on its own (plain-text files) needs no divider. */
+.workspace > .editor-host { border-right: none; }
 .preview-host { background: var(--bg); padding: 0 28px; }
 .markdown-body { max-width: 760px; margin: 0 auto; padding: 20px 0 80px; line-height: 1.7; font-size: 15px; }
 .markdown-body h1, .markdown-body h2 { border-bottom: 1px solid var(--border); padding-bottom: 6px; }

@@ -10,7 +10,7 @@ export interface Buffer {
   name: string;
   content: string;
   savedContent: string;
-  kind?: 'markdown' | 'image';
+  kind?: 'markdown' | 'image' | 'text';
 }
 
 export interface PendingInsert {

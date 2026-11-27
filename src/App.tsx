@@ -79,7 +79,8 @@ export default function App() {
   // keystroke. The active file's own content comes from the live buffer; all
   // other files are read from cache (falling back to disk once).
   useEffect(() => {
-    if (!active || !state.folder) { setBacklinks([]); return; }
+    // Wiki links only exist in Markdown documents.
+    if (!active || !state.folder || active.kind !== 'markdown') { setBacklinks([]); return; }
     const folder = state.folder;
     let cancelled = false;
     (async () => {
@@ -168,18 +169,18 @@ export default function App() {
       setState((s) => ({ ...s, recent: [path, ...s.recent.filter((p) => p !== path)].slice(0, 10) }));
       return;
     }
-    // Non-markdown, non-image files use the system default app.
-    if (!/\.md$/i.test(name)) {
-      api.openWithDefaultApp(path).catch((e) => setStatus(`打开失败: ${String(e)}`));
-      return;
-    }
     try {
+      // Any file that reads as UTF-8 text opens in the plain source editor.
+      // Binary files fail to read and fall back to the system default app.
       const content = await api.readFile(path);
-      setTabs((prev) => [...prev, { path, name, content, savedContent: content, kind: 'markdown' }]);
+      // Markdown keeps the rich editor; everything else is plain text and is
+      // always shown in source mode so saving cannot rewrite the file format.
+      const kind = /\.md$/i.test(name) ? 'markdown' : 'text';
+      setTabs((prev) => [...prev, { path, name, content, savedContent: content, kind }]);
       setActivePath(path);
       setState((s) => ({ ...s, recent: [path, ...s.recent.filter((p) => p !== path)].slice(0, 10) }));
-    } catch (e) {
-      setStatus(`打开失败: ${String(e)}`);
+    } catch {
+      api.openWithDefaultApp(path).catch((e) => setStatus(`打开失败: ${String(e)}`));
     }
   }
 
@@ -258,13 +259,15 @@ export default function App() {
   async function handlePasteImage(tempPath: string) {
     if (!activePath) return;
     const rel = await api.saveImage(tempPath, activePath);
-    if (wysiwyg) {
+    const tab = tabsRef.current.find((t) => t.path === activePath);
+    // Plain-text files get the bare relative path; Markdown gets image syntax.
+    const snippet = tab?.kind === 'text' ? rel : `![](${rel})`;
+    if (tab?.kind === 'markdown' && wysiwyg) {
       // Insert at the cursor through the editor instead of rewriting the whole
       // document (which would reset the cursor to the start).
-      queueInsert(`\n![](${rel})\n`);
-    } else {
-      const tab = tabsRef.current.find((t) => t.path === activePath);
-      if (tab) changeContent(tab.content + '\n![](' + rel + ')\n');
+      queueInsert(`\n${snippet}\n`);
+    } else if (tab) {
+      changeContent(tab.content + '\n' + snippet + '\n');
     }
   }
 
@@ -345,7 +348,7 @@ export default function App() {
             </div>
           ))}
         </div>
-        {active && (
+        {active && active.kind !== 'text' && active.kind !== 'image' && (
           <button
             className="icon-btn mode-btn"
             onClick={() => setWysiwyg((v) => !v)}
@@ -372,7 +375,7 @@ export default function App() {
           }}>
             <div className="sidebar-title">{state.folder.split('/').pop()}</div>
             <div className="tree">{renderTree(entries)}</div>
-            <div className="backlinks">
+            <div className="backlinks" hidden={active?.kind !== 'markdown'}>
               <button className="backlinks-toggle" onClick={() => setBacklinksOpen((v) => !v)}>
                 {backlinksOpen ? '▾' : '▸'} 反向链接 ({backlinks.length})
               </button>
@@ -395,6 +398,17 @@ export default function App() {
           {active ? (
             active.kind === 'image' ? (
               <ImageViewer path={active.path} />
+            ) : active.kind === 'text' ? (
+              // Plain-text files always use the source editor: no preview and
+              // no WYSIWYG, so their contents are never reinterpreted.
+              <Editor
+                key={active.path}
+                value={active.content}
+                onChange={changeContent}
+                onSave={forceSave}
+                onPasteImage={handlePasteImage}
+                theme={themeDark ? 'dark' : 'light'}
+              />
             ) : wysiwyg ? (
               <WysiwygEditor
                 key={active.path}
