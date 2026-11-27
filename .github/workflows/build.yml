@@ -3,12 +3,15 @@ name: Build macOS
 on:
   push:
     branches: [main]
+    tags: ['v*']        # e.g. v0.1.0 -> create a GitHub Release
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 jobs:
   build-macos:
+    permissions:
+      contents: write   # required to create/update GitHub Releases
     # macos-latest is available on GitHub-hosted runners. We explicitly
     # cross-compile to aarch64 so the artifact is always Apple Silicon,
     # regardless of the runner's own architecture.
@@ -40,6 +43,15 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=0.1.0" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build app bundle (aarch64)
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
@@ -55,11 +67,21 @@ jobs:
             -volname "Quill Markdown" \
             -srcfolder "$BUNDLE_DIR/macos/Quill Markdown.app" \
             -ov -format UDZO \
-            "$BUNDLE_DIR/dmg/Quill Markdown_0.1.0_aarch64.dmg"
+            "$BUNDLE_DIR/dmg/Quill Markdown_${{ steps.version.outputs.value }}_aarch64.dmg"
 
-      - name: Upload DMG
+      - name: Upload DMG as artifact
         uses: actions/upload-artifact@v4
         with:
           name: Quill-Markdown-aarch64
           path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
+
+      # On a v* tag, publish the DMG to the GitHub Release. The release is
+      # created automatically if it doesn't exist yet.
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          generate_release_notes: true
+          fail_on_unmatched_files: true
