@@ -20,6 +20,8 @@ export interface PendingInsert {
 
 export interface AppState {
   recent: string[];
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'care';
+  /** Warm-yellow depth for eye-care mode, 0-100. */
+  careTint: number;
   folder: string | null;
 }

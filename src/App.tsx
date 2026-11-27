@@ -4,19 +4,28 @@ import { Preview } from './Preview';
 import { WysiwygEditor } from './WysiwygEditor';
 import { ImageViewer } from './ImageViewer';
 import { FileTreeContextMenu } from './FileTreeContextMenu';
+import { applyCareTint } from './theme';
 import * as api from './api';
 import type { AppState, Buffer, Entry } from './types';
 import { buildWikiIndex, findBacklinks, resolveWikiLink } from './wiki';
 import './styles.css';
 
-const DEFAULT_STATE: AppState = { recent: [], theme: 'light', folder: null };
+const DEFAULT_STATE: AppState = { recent: [], theme: 'light', careTint: 55, folder: null };
 
 // Old versions stored theme:'system'. Migrate once to a concrete theme so the
 // "follow system" mode can be removed without leaving existing users stuck.
-function normalizeTheme(theme: string | undefined): 'light' | 'dark' {
+function normalizeTheme(theme: string | undefined): AppState['theme'] {
   if (theme === 'dark') return 'dark';
   if (theme === 'light') return 'light';
+  if (theme === 'care') return 'care';
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+/** light -> dark -> care -> light */
+function nextTheme(theme: AppState['theme']): AppState['theme'] {
+  if (theme === 'light') return 'dark';
+  if (theme === 'dark') return 'care';
+  return 'light';
 }
 
 export default function App() {
@@ -47,7 +56,8 @@ export default function App() {
     window.__writeTempImage = api.writeTempImage;
     api.loadState().then((s) => {
       const theme = normalizeTheme(s.theme);
-      setState({ ...DEFAULT_STATE, ...s, theme });
+      const careTint = Number.isFinite(s.careTint) ? s.careTint : DEFAULT_STATE.careTint;
+      setState({ ...DEFAULT_STATE, ...s, theme, careTint });
       setThemeDark(theme === 'dark');
       if (s.folder) {
         api.readFolder(s.folder).then(setEntries).catch(() => setEntries([]));
@@ -65,9 +75,13 @@ export default function App() {
   }, [state, loaded]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = themeDark ? 'dark' : 'light';
-    api.setWindowTheme(themeDark).catch(() => {});
-  }, [themeDark]);
+    // Eye-care mode is a warm-paper variant of the light theme, so the native
+    // window keeps the light appearance while CSS paints the warm layer.
+    const isDark = state.theme === 'dark';
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    applyCareTint(state.theme === 'care' ? state.careTint : null);
+    api.setWindowTheme(isDark).catch(() => {});
+  }, [state.theme, state.careTint]);
 
   const active = tabs.find((t) => t.path === activePath) ?? null;
 
@@ -294,7 +308,7 @@ export default function App() {
   }
 
   function toggleTheme() {
-    setState((s) => ({ ...s, theme: s.theme === 'dark' ? 'light' : 'dark' }));
+    setState((s) => ({ ...s, theme: nextTheme(s.theme) }));
   }
 
   function renderTree(nodes: Entry[], depth = 0): React.ReactNode {
@@ -357,12 +371,29 @@ export default function App() {
             {wysiwyg ? '双栏' : '单栏'}
           </button>
         )}
+        {state.theme === 'care' && (
+          <label className="care-slider" title="调节暖黄深浅">
+            <span>暖黄</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={state.careTint}
+              onChange={(e) =>
+                setState((s) => ({ ...s, careTint: Number(e.target.value) }))
+              }
+            />
+          </label>
+        )}
         <button
           className="icon-btn"
           onClick={toggleTheme}
-          title={`主题：${state.theme === 'light' ? '亮色' : '暗色'}（点击切换）`}
+          title={`主题：${
+            state.theme === 'light' ? '亮色' : state.theme === 'dark' ? '暗色' : '护眼'
+          }（点击切换）`}
         >
-          {themeDark ? '☀' : '☾'}
+          {state.theme === 'dark' ? '☀' : state.theme === 'care' ? '☕' : '☾'}
         </button>
       </header>
 

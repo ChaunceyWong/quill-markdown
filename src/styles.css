@@ -43,6 +43,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: transparent; border: none; border-radius: 6px; padding: 4px 8px; font-size: 16px;
 }
 .icon-btn:hover { background: var(--hover); }
+.care-slider { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.care-slider input[type='range'] { width: 96px; accent-color: #d9a441; }
 .tabs { display: flex; flex: 1; overflow-x: auto; height: 100%; }
 .tab { display: flex; align-items: center; border-right: 1px solid var(--border); flex-shrink: 0; }
 .tab.active { background: var(--bg); }

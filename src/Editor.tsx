@@ -31,7 +31,9 @@ function themeExtension(theme: 'light' | 'dark') {
   return [
     EditorView.theme(
       {
-        '&': { height: '100%', fontSize: '14px', backgroundColor: dark ? '#0d1117' : '#ffffff', color: dark ? '#e6edf3' : '#24292f' },
+        // Leave the background unset so the host's --bg (which eye-care mode
+        // repaints warm) shows through instead of a hardcoded white.
+        '&': { height: '100%', fontSize: '14px', backgroundColor: 'transparent', color: dark ? '#e6edf3' : '#24292f' },
         '.cm-scroller': {
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           lineHeight: '1.6',
@@ -40,7 +42,7 @@ function themeExtension(theme: 'light' | 'dark') {
         '.cm-content': { padding: '20px 24px', caretColor: dark ? '#58a6ff' : '#4f8ff7' },
         '.cm-gutters': { display: 'none' },
         '&.cm-focused': { outline: 'none' },
-        '.cm-activeLine': { backgroundColor: dark ? '#161b22' : '#f6f8fa' },
+        '.cm-activeLine': { backgroundColor: dark ? '#161b22' : 'rgba(0,0,0,0.04)' },
         '.cm-selectionBackground': { backgroundColor: dark ? '#264f78' : '#b6d7ff' },
       },
       { dark }
