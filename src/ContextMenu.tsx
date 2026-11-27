@@ -41,6 +41,9 @@ export function ContextMenu({ editor, x, y, onClose, onWiki }: Props) {
       <button onClick={() => run(() => editor.chain().focus().toggleCode().run())}>
         行内代码 <kbd>⌘E</kbd>
       </button>
+      <button onClick={() => run(() => editor.chain().focus().toggleCodeBlock().run())}>
+        代码块 <kbd>⌘⌥C</kbd>
+      </button>
 
       <div className="context-sep" />
 
