@@ -59,7 +59,7 @@ Release DMGs are only notarized when the signing secrets are configured in CI. I
 xattr -cr "/Applications/Quill Markdown.app"
 ```
 
-This is a manual, per-install step. The proper fix is code signing + notarization with an Apple Developer ID; the CI workflow supports it via the `MACOS_CERT_P12`, `MACOS_CERT_PASSWORD`, `MACOS_SIGN_IDENTITY`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD` secrets.
+This is a manual, per-install step.
 
 ## Project layout
 
