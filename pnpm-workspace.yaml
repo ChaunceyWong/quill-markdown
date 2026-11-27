@@ -1,7 +1,8 @@
-onlyBuiltDependencies:
-  - esbuild
 
 # CI runners may ship a default supply-chain policy that rejects freshly
 # published packages. Our lockfile is committed and reviewed, so disable
 # the minimum-release-age gate here.
 minimumReleaseAge: 0
+
+allowBuilds:
+  esbuild: true
