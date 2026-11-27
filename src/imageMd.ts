@@ -1,4 +1,4 @@
-import { resolveAsset } from './api';
+import { resolveAssetCached } from './render';
 
 /**
  * WYSIWYG (TipTap) loads Markdown directly, but a WKWebView cannot resolve
@@ -27,7 +27,7 @@ export async function toEditorMarkdown(
     } else {
       try {
         const abs = `${dir}/${src.replace(/^\.\//, '')}`;
-        const dataUrl = await resolveAsset(abs);
+        const dataUrl = await resolveAssetCached(abs);
         reverse.set(dataUrl, src);
         out.push(`![${m[1]}](${dataUrl})`);
       } catch {

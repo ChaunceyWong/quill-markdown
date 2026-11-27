@@ -12,6 +12,16 @@ struct Entry {
     children: Option<Vec<Entry>>,
 }
 
+/// Directories that are never worth walking: build output and dependencies
+/// can contain tens of thousands of files and would stall the sidebar.
+fn is_skipped_dir(name: &str) -> bool {
+    name.starts_with('.')
+        || matches!(
+            name,
+            "node_modules" | "target" | "dist" | "build" | "Pods" | ".next" | "__pycache__"
+        )
+}
+
 fn list_entries(dir: &Path) -> std::io::Result<Vec<Entry>> {
     let mut entries = Vec::new();
     let mut items: Vec<_> = fs::read_dir(dir)?.filter_map(|e| e.ok()).collect();
@@ -21,12 +31,20 @@ fn list_entries(dir: &Path) -> std::io::Result<Vec<Entry>> {
     });
     for e in items {
         let name = e.file_name().to_string_lossy().into_owned();
+        let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
+        if is_skipped_dir(&name) && is_dir {
+            continue;
+        }
         if name.starts_with('.') {
             continue;
         }
-        let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
         let path = e.path();
-        let children = if is_dir { Some(list_entries(&path)?) } else { None };
+        // A single unreadable subdirectory must not fail the whole tree.
+        let children = if is_dir {
+            Some(list_entries(&path).unwrap_or_default())
+        } else {
+            None
+        };
         entries.push(Entry {
             path: path.to_string_lossy().into_owned(),
             name,
@@ -63,7 +81,11 @@ fn list_markdown_files(root: &str) -> Result<Vec<String>, String> {
             }
             let p = e.path();
             if p.is_dir() {
-                walk(&p, out)?;
+                if is_skipped_dir(&name) {
+                    continue;
+                }
+                // Ignore unreadable subdirectories instead of aborting.
+                let _ = walk(&p, out);
             } else if p.extension().and_then(|s| s.to_str()) == Some("md") {
                 out.push(p.to_string_lossy().into_owned());
             }

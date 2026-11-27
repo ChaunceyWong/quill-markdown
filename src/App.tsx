@@ -71,25 +71,41 @@ export default function App() {
 
   const active = tabs.find((t) => t.path === activePath) ?? null;
 
-  // Recompute backlinks when the active document or its content changes.
+  // Cache of every .md file's source, keyed by path. Backlink scanning reads
+  // the whole folder; caching avoids re-reading files on every keystroke.
+  const docCache = useRef<Map<string, string>>(new Map());
+
+  // Recompute backlinks only when the active document changes, not on every
+  // keystroke. The active file's own content comes from the live buffer; all
+  // other files are read from cache (falling back to disk once).
   useEffect(() => {
     if (!active || !state.folder) { setBacklinks([]); return; }
+    const folder = state.folder;
     let cancelled = false;
-    api.listMarkdownFiles(state.folder).then(async (paths) => {
-      const docs = await Promise.all(paths.map(async (p) => ({
-        path: p,
-        content: p === active.path
-          ? active.content
-          : await api.readFile(p).catch(() => ''),
-      })));
-      if (!cancelled) setBacklinks(findBacklinks(active.name, docs).filter((p) => p !== active.path));
-    }).catch(() => { if (!cancelled) setBacklinks([]); });
+    (async () => {
+      try {
+        const paths = await api.listMarkdownFiles(folder);
+        const docs = await Promise.all(paths.map(async (p) => {
+          if (p === active.path) return { path: p, content: active.content };
+          const cached = docCache.current.get(p);
+          if (cached !== undefined) return { path: p, content: cached };
+          const content = await api.readFile(p).catch(() => '');
+          docCache.current.set(p, content);
+          return { path: p, content };
+        }));
+        if (!cancelled) setBacklinks(findBacklinks(active.name, docs).filter((p) => p !== active.path));
+      } catch {
+        if (!cancelled) setBacklinks([]);
+      }
+    })();
     return () => { cancelled = true; };
-  }, [active?.path, active?.content, state.folder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.path, state.folder]);
 
   const persistBuffer = useCallback((path: string, content: string) => {
     api.writeFile(path, content)
       .then(() => {
+        docCache.current.set(path, content);
         setTabs((prev) => prev.map((t) => (t.path === path ? { ...t, savedContent: content } : t)));
         setStatus('已保存');
       })

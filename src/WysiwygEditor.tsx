@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -40,9 +40,12 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
   const cbRef = useRef({ onChange, onSave, onPasteImage, onWikiClick, onPersistPos });
   cbRef.current = { onChange, onSave, onPasteImage, onWikiClick, onPersistPos };
   const loadingRef = useRef(false);
+  const lastEmitted = useRef<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
-  const outline = parseOutline(value);
+  // Parsing the whole document on every render is wasteful; only redo it
+  // when the text actually changes.
+  const outline = useMemo(() => parseOutline(value), [value]);
 
   function jumpToHeading(item: OutlineItem) {
     if (!editor) return;
@@ -115,7 +118,12 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
     },
     onUpdate: ({ editor: e }) => {
       if (loadingRef.current) return;
-      cbRef.current.onChange(fromEditorMarkdown(e.getMarkdown(), reverseImages.current));
+      const md = fromEditorMarkdown(e.getMarkdown(), reverseImages.current);
+      // Remember what we just emitted so the value-sync effect below can
+      // recognise its own echo and skip an expensive re-load (which would
+      // re-read and base64 every image on each keystroke).
+      lastEmitted.current = md;
+      cbRef.current.onChange(md);
     },
     onSelectionUpdate: ({ editor: e }) => {
       const { from, to } = e.state.selection;
@@ -123,8 +131,23 @@ export function WysiwygEditor({ value, onChange, onSave, onPasteImage, onWikiCli
     },
   });
 
+  // A document switch must always reload, even if the incoming text happens
+  // to equal what the previous document last emitted.
+  const lastDocPath = useRef(docPath);
+  useEffect(() => {
+    if (lastDocPath.current !== docPath) {
+      lastDocPath.current = docPath;
+      lastEmitted.current = null;
+    }
+  }, [docPath]);
+
   useEffect(() => {
     if (!editor) return;
+    // Skip the round-trip when this value is simply the editor's own output.
+    if (lastEmitted.current === value) {
+      lastEmitted.current = null;
+      return;
+    }
     let cancelled = false;
     loadingRef.current = true;
     toEditorMarkdown(value, docPath).then(({ markdown, reverse }) => {

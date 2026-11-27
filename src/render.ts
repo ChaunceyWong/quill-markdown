@@ -1,6 +1,20 @@
 import MarkdownIt from 'markdown-it';
 import { resolveAsset } from './api';
 
+// Images are immutable once written (names carry a nanosecond timestamp), so
+// caching their data URLs avoids re-reading and re-encoding them on every
+// preview render.
+const assetCache = new Map<string, Promise<string>>();
+
+export function resolveAssetCached(path: string): Promise<string> {
+  const cached = assetCache.get(path);
+  if (cached) return cached;
+  const p = resolveAsset(path);
+  assetCache.set(path, p);
+  p.catch(() => assetCache.delete(path));
+  return p;
+}
+
 export const md: MarkdownIt = new MarkdownIt({
   // Needed for <span style="color:..."> emitted by the WYSIWYG color/highlight
   // marks. Content is strictly local user-authored files.
@@ -40,7 +54,7 @@ export async function render(source: string, docPath: string | null): Promise<st
 
   const dataUrls = await Promise.all(
     refs.map(async ({ abs }) => {
-      try { return await resolveAsset(abs); } catch { return abs; }
+      try { return await resolveAssetCached(abs); } catch { return abs; }
     })
   );
   refs.forEach(({ index }) => {

@@ -11,10 +11,17 @@ export function Preview({ source, docPath }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    render(source, docPath).then((result) => {
-      if (!cancelled) setHtml(result);
-    });
-    return () => { cancelled = true; };
+    // Debounce so fast typing does not trigger a full markdown render — and a
+    // disk read for every image — on each keystroke.
+    const timer = window.setTimeout(() => {
+      render(source, docPath).then((result) => {
+        if (!cancelled) setHtml(result);
+      });
+    }, 150);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [source, docPath]);
 
   return (
