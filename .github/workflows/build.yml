@@ -9,8 +9,10 @@ on:
 
 jobs:
   build-macos:
-    # macos-14 runs on Apple Silicon, matching the aarch64 target.
-    runs-on: macos-14
+    # macos-latest is available on GitHub-hosted runners. We explicitly
+    # cross-compile to aarch64 so the artifact is always Apple Silicon,
+    # regardless of the runner's own architecture.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -33,27 +35,31 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          key: aarch64-apple-darwin
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build app bundle
+      - name: Build app bundle (aarch64)
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
         # Bundle only the .app here: Tauri's DMG script needs Finder
         # automation, which is unavailable in a headless CI runner.
-        run: pnpm tauri build --bundles app
+        run: pnpm tauri build --target aarch64-apple-darwin --bundles app
 
       - name: Create DMG with hdiutil
         run: |
-          mkdir -p src-tauri/target/release/bundle/dmg
+          BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
+          mkdir -p "$BUNDLE_DIR/dmg"
           hdiutil create \
             -volname "Quill Markdown" \
-            -srcfolder "src-tauri/target/release/bundle/macos/Quill Markdown.app" \
+            -srcfolder "$BUNDLE_DIR/macos/Quill Markdown.app" \
             -ov -format UDZO \
-            "src-tauri/target/release/bundle/dmg/Quill Markdown_0.1.0_aarch64.dmg"
+            "$BUNDLE_DIR/dmg/Quill Markdown_0.1.0_aarch64.dmg"
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
           name: Quill-Markdown-aarch64
-          path: src-tauri/target/release/bundle/dmg/*.dmg
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
