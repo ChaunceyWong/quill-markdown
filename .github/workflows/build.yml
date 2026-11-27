@@ -16,6 +16,8 @@ jobs:
     # cross-compile to aarch64 so the artifact is always Apple Silicon,
     # regardless of the runner's own architecture.
     runs-on: macos-latest
+    env:
+      MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +61,39 @@ jobs:
         # automation, which is unavailable in a headless CI runner.
         run: pnpm tauri build --target aarch64-apple-darwin --bundles app
 
+      # ---- Optional code signing + notarization -------------------------
+      # Fully bypassing Gatekeeper from inside the app is impossible: macOS
+      # security cannot be disabled by app config. The only legitimate way
+      # for users to open the app without manual xattr commands is to sign
+      # and notarize with an Apple Developer ID certificate. Configure the
+      # secrets below in Settings -> Secrets and variables -> Actions; until
+      # then these steps are skipped and the DMG is unsigned.
+      - name: Import signing certificate
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          security create-keychain -p "$MACOS_CERT_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MACOS_CERT_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN_PATH" \
+            -P "$MACOS_CERT_PASSWORD" -A \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$MACOS_CERT_PASSWORD" "$KEYCHAIN_PATH" > /dev/null
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Sign app bundle
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+        run: |
+          codesign --force --deep --sign "$MACOS_SIGN_IDENTITY" \
+            --options runtime --timestamp \
+            "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Quill Markdown.app"
+
       - name: Create DMG with hdiutil
         run: |
           BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
@@ -68,6 +103,19 @@ jobs:
             -srcfolder "$BUNDLE_DIR/macos/Quill Markdown.app" \
             -ov -format UDZO \
             "$BUNDLE_DIR/dmg/Quill Markdown_${{ steps.version.outputs.value }}_aarch64.dmg"
+
+      - name: Notarize DMG
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          DMG="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Quill Markdown_${{ steps.version.outputs.value }}_aarch64.dmg"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --wait
+          xcrun stapler staple "$DMG"
 
       - name: Upload DMG as artifact
         uses: actions/upload-artifact@v4

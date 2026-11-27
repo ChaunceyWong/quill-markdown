@@ -51,6 +51,16 @@ pnpm tauri build   # 在 src-tauri/target/release/bundle/ 下生成 .app 和 .dm
 > hdiutil convert "macos/rw."*.dmg -format UDZO -o "dmg/Quill Markdown_0.1.0_aarch64.dmg"
 > ```
 
+### 安装未签名的构建
+
+只有当 CI 配置了签名 secrets 时，Release 里的 DMG 才会经过公证。如果 macOS 提示应用「已损坏，无法打开」，应用本身没有问题——是 Gatekeeper 拦截了未签名的下载。把应用复制到 `/Applications` 后，移除隔离属性即可：
+
+```bash
+xattr -cr "/Applications/Quill Markdown.app"
+```
+
+这需要每次安装手动执行一次。彻底的解决方案是用 Apple Developer ID 做代码签名 + 公证；CI workflow 已通过 `MACOS_CERT_P12`、`MACOS_CERT_PASSWORD`、`MACOS_SIGN_IDENTITY`、`APPLE_ID`、`APPLE_TEAM_ID` 和 `APPLE_APP_PASSWORD` 这些 secrets 支持它。
+
 ## 项目结构
 
 ```

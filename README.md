@@ -51,6 +51,16 @@ The frontend alone can be built with `pnpm build` (output in `dist/`), which is 
 > hdiutil convert "macos/rw."*.dmg -format UDZO -o "dmg/Quill Markdown_0.1.0_aarch64.dmg"
 > ```
 
+### Installing an unsigned build
+
+Release DMGs are only notarized when the signing secrets are configured in CI. If macOS says the app "is damaged and can't be opened", the app is fine — Gatekeeper is blocking an unsigned download. Remove the quarantine flag after copying the app to `/Applications`:
+
+```bash
+xattr -cr "/Applications/Quill Markdown.app"
+```
+
+This is a manual, per-install step. The proper fix is code signing + notarization with an Apple Developer ID; the CI workflow supports it via the `MACOS_CERT_P12`, `MACOS_CERT_PASSWORD`, `MACOS_SIGN_IDENTITY`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD` secrets.
+
 ## Project layout
 
 ```
