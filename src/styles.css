@@ -91,7 +91,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .markdown-body table { border-collapse: collapse; }
 .markdown-body th, .markdown-body td { border: 1px solid var(--border); padding: 6px 12px; }
 
-.welcome { margin: auto; text-align: center; max-width: 520px; padding: 40px; }
+.welcome-scroll { flex: 1; min-width: 0; overflow-y: auto; display: flex; }
+.welcome { margin: auto; text-align: center; width: 100%; max-width: 520px; padding: 40px; box-sizing: border-box; }
 .welcome h1 { font-size: 32px; margin: 0 0 8px; }
 .subtitle { color: var(--muted); margin: 0 0 24px; }
 .primary { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; }

@@ -420,6 +420,7 @@ export default function App() {
               </div>
             )
           ) : (
+            <div className="welcome-scroll">
             <div className="welcome">
               <h1>Quill Markdown</h1>
               <p className="subtitle">小巧、本地优先的 Markdown 写作工具</p>
@@ -441,6 +442,7 @@ export default function App() {
                   </ul>
                 </>
               )}
+            </div>
             </div>
           )}
         </main>
